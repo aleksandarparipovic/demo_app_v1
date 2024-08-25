@@ -1,0 +1,6 @@
+declare module 'tmo-poptoken-builder/poptoken-builder-node.js' {
+  // Add specific types or use 'any' as a temporary placeholder
+  const popTokenBuilder: any;
+  export default popTokenBuilder;
+}
+export declare module 'tmo-poptoken-builder/poptoken-builder-node.js';

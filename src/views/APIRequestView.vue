@@ -33,8 +33,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { clientID, clientSecret } from '../components/HelloWorld.vue'; // Importing the clientID and clientSecret
-import { initializeAuthorizationHeader } from '../initAuthorizationHeader.ts'; // Adjust path as necessary
+import { initializeAuthorizationHeader } from '../initAuthorizationHeader'; // Adjust path as necessary
 import axios from 'axios';
+// @ts-ignore
 import popTokenBuilder from 'tmo-poptoken-builder/poptoken-builder-node.js';
 
 let authorizationHeader = ref('');
@@ -49,9 +50,9 @@ const uris = ref([
 const selectedUri = ref(uris.value[0]);
 const requestBody = ref('');
 const response = ref('');
-const data = ref(null);
+const data = ref('');
 const loading = ref(false);
-const error = ref(null);
+const error = ref('');
 const handleUriChange = () => {
     // Change request body based on the selected URI
     updateAuthorizationHeader();
@@ -106,41 +107,41 @@ const handleUriChange = () => {
 };
 
 const sendRequest = async () => {
-  try {
-    // const res = await axios.post(selectedUri.value, JSON.parse(requestBody.value));
-    // response.value = JSON.stringify(res.data, null, 2);
-  } catch (error) {
-    response.value = `Error: ${error.message}`;
-  }
+try {
+  // const res = await axios.post(selectedUri.value, JSON.parse(requestBody.value));
+  // response.value = JSON.stringify(res.data, null, 2);
+} catch (error) {
+  response.value = `Error: ${(error as Error).message}`;
+}
 };
 
 
 
 // Method to fetch data from the API
-async function fetchData(popToken) {
-  loading.value = true;  // Set loading state to true
-  error.value = null;    // Reset error state
-  data.value = null;     // Reset data state
+async function fetchData(popToken: string) {
+
+  loading.value = true;
+  error.value = "";
+  data.value = "";
 
   const requestBody = {
-      'Authorization': authorizationHeader.value,
-      'X-Authorization': popToken,
-      'Content-Type': 'application/json',
-      'test-23': 'test-001'
-    };
+    'Authorization': authorizationHeader.value,
+    'X-Authorization': popToken,
+    'Content-Type': 'application/json',
+    'test-23': 'test-001'
+  };
 
-    try {
-       console.log(requestBody);
-      const response = await axios.post('https://api-teststg.t-mobile.com/oauth2/v2/tokens', requestBody);
-      // data.value = `Success: ${response.data.message}`;
-      console.log(response);
-    } catch (error) {
-      error.value = `Error: ${error.response ? error.response.data.message : error.message}`;
-    } finally {
-      loading.value = false;  // Reset loading state
-    }
-
+  try {
+    console.log(requestBody);
+    const response = await axios.post('https://api-teststg.t-mobile.com/oauth2/v2/tokens', requestBody);
+    console.log(response);
+  } catch (err) {
+    error.value = `Error: ${(err as Error).message}`;
+  } finally {
+    loading.value = false;
+  }
 }
+
 </script>
 
 <style scoped>
