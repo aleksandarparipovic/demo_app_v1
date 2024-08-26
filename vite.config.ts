@@ -20,10 +20,5 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
-  build: {
-      rollupOptions: {
-        external: ['jsrsasign', 'tmo-poptoken-builder/poptoken-builder-node.js'],
-      },
-    },
 
 })
