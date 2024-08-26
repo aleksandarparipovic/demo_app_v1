@@ -22,7 +22,7 @@ export default defineConfig({
   },
   build: {
       rollupOptions: {
-        external: ['jsrsasign'],
+        external: ['jsrsasign', 'tmo-poptoken-builder/poptoken-builder-node.js'],
       },
     },
 
