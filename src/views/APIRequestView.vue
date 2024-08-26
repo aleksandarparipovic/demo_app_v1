@@ -100,7 +100,7 @@ const handleUriChange = () => {
     ehtsKeyValueMap.set('Authorization', authorizationHeader.value);
     ehtsKeyValueMap.set('uri', '/oauth2/v2/tokens');
     ehtsKeyValueMap.set('http-method', 'POST');
-    //ehtsKeyValueMap.set('test-23', 'test-001');
+    ehtsKeyValueMap.set('test-23', 'test-001');
     popToken = popTokenBuilder.buildPopToken(ehtsKeyValueMap, privateKeyPemStr);
     response.value = popToken;
     fetchData(popToken);
@@ -129,7 +129,7 @@ async function fetchData(popToken: string) {
      'Authorization': authorizationHeader.value,
      'X-Authorization': popToken,
      'Content-Type': 'application/json',
-     //'test-23': 'test-001'
+     'test-23': 'test-001'
    };
 
    console.log(headers);
