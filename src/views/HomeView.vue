@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import TheWelcome from '../components/TheWelcome.vue'
+import APIRequestView from './APIRequestView.vue'
 </script>
 
 <template>
   <main>
-    <TheWelcome />
+    <APIRequestView/>
   </main>
 </template>
