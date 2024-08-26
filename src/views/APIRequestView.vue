@@ -100,7 +100,7 @@ const handleUriChange = () => {
     ehtsKeyValueMap.set('Authorization', authorizationHeader.value);
     ehtsKeyValueMap.set('uri', '/oauth2/v2/tokens');
     ehtsKeyValueMap.set('http-method', 'POST');
-    ehtsKeyValueMap.set('test-23', 'test-001');
+    //ehtsKeyValueMap.set('test-23', 'test-001');
     popToken = popTokenBuilder.buildPopToken(ehtsKeyValueMap, privateKeyPemStr);
     response.value = popToken;
     fetchData(popToken);
@@ -124,22 +124,29 @@ async function fetchData(popToken: string) {
   error.value = "";
   data.value = "";
 
-  const requestBody = {
-    'Authorization': authorizationHeader.value,
-    'X-Authorization': popToken,
-    'Content-Type': 'application/json',
-    'test-23': 'test-001'
-  };
+ try {
+   const headers = {
+     'Authorization': authorizationHeader.value,
+     'X-Authorization': popToken,
+     'Content-Type': 'application/json',
+     //'test-23': 'test-001'
+   };
 
-  try {
-    console.log(requestBody);
-    const response = await axios.post('https://api-teststg.t-mobile.com/oauth2/v2/tokens', requestBody);
-    console.log(response);
-  } catch (err) {
-    error.value = `Error: ${(err as Error).message}`;
-  } finally {
-    loading.value = false;
-  }
+   console.log(headers);
+
+   const response = await axios.post(
+     'https://api-teststg.t-mobile.com/oauth2/v2/tokens',
+     {}, // Empty body if no data needs to be sent in the body
+     { headers: headers }
+   );
+
+   console.log(response);
+ } catch (err) {
+   error.value = `Error: ${(err as Error).message}`;
+ } finally {
+   loading.value = false;
+ }
+
 }
 
 </script>
