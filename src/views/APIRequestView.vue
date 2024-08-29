@@ -1,69 +1,119 @@
 <template>
-  <div class="container">
-    <h1>BYON API Request</h1>
-    <div class="form-group">
-      <label for="uri">Select URI:</label>
-      <select id="uri" v-model="selectedUri" @change="handleUriChange">
-        <option v-for="uri in uris" :key="uri" :value="uri">{{ uri }}</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="request-body">Request Body:</label>
-      <textarea
-        id="request-body"
-        rows="10"
-        cols="50"
-        v-model="requestBody"
-      ></textarea>
-    </div>
-    <button class="btn" @click="sendRequest">Send Request</button>
-    <div class="form-group response-group">
-      <label for="response">Response:</label>
-      <textarea
-        id="response"
-        rows="10"
-        cols="50"
-        readonly
-        v-model="response"
-      ></textarea>
+  <div class="form-container">
+    <div class="form-content">
+      <div class="left-panel">
+        <h1>Client Credentials</h1>
+        <form @submit.prevent="handleSubmit">
+          <div class="input-group">
+            <label for="clientID">Client ID</label>
+            <input type="text" id="clientID" v-model="clientID" placeholder="Enter your Client ID" />
+          </div>
+          <div class="input-group">
+            <label for="clientSecret">Client Secret</label>
+            <div class="password-wrapper">
+              <input :type="isSecretVisible ? 'text' : 'password'" id="clientSecret" v-model="clientSecret" placeholder="Enter your Client Secret" />
+              <span @click="toggleSecretVisibility" class="eye-icon">
+                <img :src="isSecretVisible ? eyeIconOpen : eyeIconClosed" alt="Toggle visibility" />
+              </span>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="right-panel">
+        <h1>BYON API Request</h1>
+        <div class="form-group uri-method-group">
+          <div class="method-dropdown">
+            <label for="method">Method:</label>
+            <select id="method" v-model="selectedMethod">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="DELETE">DELETE</option>
+              <option value="UPDATE">UPDATE</option>
+            </select>
+          </div>
+          <div class="uri-input-group">
+            <label for="uri">URI:</label>
+            <input type="text" id="uri" v-model="currentURI" placeholder="Enter the URI" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="request-body">Request Body:</label>
+          <textarea id="request-body" rows="10" cols="50" v-model="requestBody" placeholder="Enter the Request Body"></textarea>
+        </div>
+        <button class="btn" @click="sendRequest">Send Request</button>
+        <div class="form-group response-group">
+          <label for="response">Response:</label>
+          <textarea id="response" rows="10" cols="50" readonly v-model="response"></textarea>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { clientID, clientSecret } from '../components/HelloWorld.vue'; // Importing the clientID and clientSecret
-import { initializeAuthorizationHeader } from '../initAuthorizationHeader'; // Adjust path as necessary
 import axios from 'axios';
 // @ts-ignore
 import popTokenBuilder from 'tmo-poptoken-builder/poptoken-builder-node.js';
+import { initializeAuthorizationHeader } from '../initAuthorizationHeader'; // Adjust path as necessary
 
+// Importing images
+import eyeIconOpen from '@/components/icons/eye-icon-open.png';
+import eyeIconClosed from '@/components/icons/eye-icon-closed.png';
+
+// Client credentials
+let clientID = ref('tmon-BGphffvi5Lk5N9GHlisrA918yh4UC3ww');
+let clientSecret = ref('65N3MGG1kGq0uosO');
+
+// Visibility toggle for client secret
+let isSecretVisible = ref(false);
+
+const toggleSecretVisibility = () => {
+  isSecretVisible.value = !isSecretVisible.value;
+};
+
+// Authorization header
 let authorizationHeader = ref('');
 const updateAuthorizationHeader = () => {
   authorizationHeader.value = initializeAuthorizationHeader(clientID.value, clientSecret.value);
-}
+};
+
+// API request state
 const uris = ref([
-  'calllogs/v2/search',
+  'qod/v0/sessions',
   'calllogs/v2/{calllogId}'
 ]);
 
-const selectedUri = ref(uris.value[0]);
+const currentURI = ref(uris.value[0]);
+const selectedMethod = ref('GET'); // New ref for selected method
 const requestBody = ref('');
 const response = ref('');
-const data = ref('');
 const loading = ref(false);
 const error = ref('');
-const handleUriChange = () => {
-    // Change request body based on the selected URI
-    updateAuthorizationHeader();
-    requestBody.value = `Request body for ${selectedUri.value}`;
-    requestBody.value += `\nClient ID: ${clientID.value}`;
-    requestBody.value += `\nClient Secret: ${clientSecret.value}`;
-    requestBody.value += `\nAuthorizationHeader: ${authorizationHeader.value}`;
+const data = ref('');
+let accessToken = ref('');
+let idToken = ref('');
 
-    let popToken = '';
-    let ehtsKeyValueMap = new Map();
-    const privateKeyPemStr: string = `
+// Handle client credentials form submission
+function handleSubmit() {
+  console.log('Client ID:', clientID.value);
+  console.log('Client Secret:', clientSecret.value);
+  updateAuthorizationHeader();
+}
+
+// Handle URI change
+const getAccessToken = () => {
+  updateAuthorizationHeader();
+  const popToken = generatePopToken(authorizationHeader.value, 'application/json', '/oauth2/v2/tokens', 'POST', '');
+  fetchData(popToken);
+};
+
+// Generate PoP token
+const generatePopToken = (authorization: string, contentType: string, uri: string, httpMethod: string, body: string) => {
+  updateAuthorizationHeader();
+  let ehtsKeyValueMap = new Map();
+  const privateKeyPemStr: string = `
     -----BEGIN PRIVATE KEY-----
     MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCeiyREXzFp0r71
     62/oMssrLd9FylhLiEmteiTk78Xm0etWVZkWSvmHgUHMd/0R9ZLuPjnFGmYYNq3z
@@ -92,81 +142,170 @@ const handleUriChange = () => {
     wn8b9Opc2nQSnmvNNuGxODg6H+HGST2DZrTBIidSpqR+EmWdGMaaK5/0Aw7zdfJU
     isvXtVzhQqtxKpL3ErLeOA==
     -----END PRIVATE KEY-----
-    `;
+  `;
+  ehtsKeyValueMap.set('Authorization', authorization);
+  ehtsKeyValueMap.set('Content-Type', contentType);
+  ehtsKeyValueMap.set('uri', uri);
+  ehtsKeyValueMap.set('http-method', httpMethod); // Use selected method
+  if(body)
+    ehtsKeyValueMap.set('body', body);
 
-
-
-    ehtsKeyValueMap.set('Content-Type', 'application/json');
-    ehtsKeyValueMap.set('Authorization', authorizationHeader.value);
-    ehtsKeyValueMap.set('uri', '/oauth2/v2/tokens');
-    ehtsKeyValueMap.set('http-method', 'POST');
-    ehtsKeyValueMap.set('test-23', 'test-001');
-    popToken = popTokenBuilder.buildPopToken(ehtsKeyValueMap, privateKeyPemStr);
-    response.value = popToken;
-    fetchData(popToken);
+  return popTokenBuilder.buildPopToken(ehtsKeyValueMap, privateKeyPemStr);
 };
 
+// Send request
 const sendRequest = async () => {
-try {
-  // const res = await axios.post(selectedUri.value, JSON.parse(requestBody.value));
-  // response.value = JSON.stringify(res.data, null, 2);
-} catch (error) {
-  response.value = `Error: ${(error as Error).message}`;
-}
+  getAccessToken();
+  const auth = 'Bearer ' + accessToken.value;
+  const popToken = generatePopToken(auth, 'application/json', currentURI.value, selectedMethod.value, requestBody.value);
+
+  try {
+    const headers = {
+      'Authorization': auth,
+      'X-Authorization': popToken,
+      'Content-Type': 'application/json',
+      'X-Requester': 'Apple',
+    };
+    const myResponse = await axios.post(
+      'https://api-teststg.t-mobile.com/' + currentURI.value,
+      requestBody.value,
+      { headers: headers }
+    );
+    response.value = myResponse.data;
+  } catch (err) {
+    response.value = `Error: ${(err as Error).message}`;
+  }
 };
 
-
-
-// Method to fetch data from the API
+// Fetch data
 async function fetchData(popToken: string) {
-
   loading.value = true;
   error.value = "";
   data.value = "";
 
- try {
-   const headers = {
-     'Authorization': authorizationHeader.value,
-     'X-Authorization': popToken,
-     'Content-Type': 'application/json',
-     'test-23': 'test-001'
-   };
+  try {
+    const headers = {
+      'Authorization': authorizationHeader.value,
+      'X-Authorization': popToken,
+      'Content-Type': 'application/json'
+    };
 
-   console.log(headers);
-
-   const response = await axios.post(
-     'https://api-teststg.t-mobile.com/oauth2/v2/tokens',
-     {}, // Empty body if no data needs to be sent in the body
-     { headers: headers }
-   );
-
-   console.log(response);
- } catch (err) {
-   error.value = `Error: ${(err as Error).message}`;
- } finally {
-   loading.value = false;
- }
-
+    const myResponse = await axios.post(
+      'https://api-teststg.t-mobile.com/oauth2/v2/tokens',
+      {},
+      { headers: headers }
+    );
+    accessToken.value = myResponse.data.access_token;
+  } catch (err) {
+    error.value = `Error: ${(err as Error).message}`;
+  } finally {
+    loading.value = false;
+  }
 }
-
 </script>
 
 <style scoped>
-.container {
-  max-width: 800px;
+.form-container {
+  max-width: 100%;
   margin: 0 auto;
-  padding: 20px;
-  font-family: Arial, sans-serif;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
   background-color: #f9f9f9;
+}
+
+.form-content {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Aligns both panels at the top */
+  gap: 2rem;
+  width: 100%;
+}
+
+.left-panel, .right-panel {
+  background-color: #ffffff;
+  padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  flex: 1;
+  max-width: 50%; /* Each panel takes up 50% of the width */
+}
+
+.orange {
+  color: #f6a927;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #e6543d;
+}
+
+input[type="text"],
+input[type="password"],
+textarea {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  border-color: #f6a927;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(246, 169, 39, 0.3);
+}
+
+.password-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.eye-icon {
+  position: absolute;
+  right: 10px;
+  cursor: pointer;
+}
+
+.eye-icon img {
+  width: 20px;
+  height: 20px;
+}
+
+.btn {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: #e6543d;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.btn:hover {
+  background-color: #c94431;
 }
 
 h1 {
-  font-size: 24px;
   margin-bottom: 20px;
-  color: #f6a927; /* Primary color */
-  text-align: center;
 }
 
 .form-group {
@@ -174,51 +313,35 @@ h1 {
 }
 
 .response-group {
-  margin-top: 30px; /* Added margin-top to create more space above the response area */
+  margin-top: 30px;
 }
 
-label {
-  display: block;
-  font-weight: bold;
-  margin-bottom: 5px;
-  color: #e6543d; /* Secondary color */
+/* Styling for URI and Method inputs */
+.uri-method-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-select,
-textarea {
+.uri-input-group {
+  flex: 3;
+}
+
+.method-dropdown {
+  flex: 1;
+}
+
+select {
   width: 100%;
   padding: 10px;
-  font-size: 16px;
+  font-size: 14px;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
 
-textarea {
-  resize: vertical;
-}
-
-select:focus,
-textarea:focus {
-  border-color: #f6a927; /* Primary color for focus */
+select:focus {
+  border-color: #f6a927;
   outline: none;
   box-shadow: 0 0 0 3px rgba(246, 169, 39, 0.3);
-}
-
-.btn {
-  display: inline-block;
-  padding: 10px 20px;
-  font-size: 16px;
-  color: #fff;
-  background-color: #e6543d; /* Secondary color */
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: center;
-  transition: background-color 0.3s;
-  margin-bottom: 0px; /* Added margin-bottom to create space below the button */
-}
-
-.btn:hover {
-  background-color: #c94431; /* Darkened secondary color for hover */
 }
 </style>
