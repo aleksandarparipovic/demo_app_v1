@@ -155,7 +155,7 @@ const generatePopToken = (authorization: string, contentType: string, uri: strin
 
 // Send request
 const sendRequest = async () => {
-  getAccessToken();
+  await getAccessToken();
   const auth = 'Bearer ' + accessToken.value;
   const popToken = generatePopToken(auth, 'application/json', currentURI.value, selectedMethod.value, requestBody.value);
 
@@ -163,8 +163,7 @@ const sendRequest = async () => {
     const headers = {
       'Authorization': auth,
       'X-Authorization': popToken,
-      'Content-Type': 'application/json',
-      'X-Requester': 'Apple',
+      'Content-Type': 'application/json'
     };
     const myResponse = await axios.post(
       'https://api-teststg.t-mobile.com/' + currentURI.value,
