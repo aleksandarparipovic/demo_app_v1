@@ -103,10 +103,10 @@ function handleSubmit() {
 }
 
 // Handle URI change
-const getAccessToken = () => {
+const getAccessToken = async () => {
   updateAuthorizationHeader();
   const popToken = generatePopToken(authorizationHeader.value, 'application/json', '/oauth2/v2/tokens', 'POST', '');
-  fetchData(popToken);
+  await fetchAccessToken(popToken);
 };
 
 // Generate PoP token
@@ -143,10 +143,14 @@ const generatePopToken = (authorization: string, contentType: string, uri: strin
     isvXtVzhQqtxKpL3ErLeOA==
     -----END PRIVATE KEY-----
   `;
-  ehtsKeyValueMap.set('Authorization', authorization);
-  ehtsKeyValueMap.set('Content-Type', contentType);
-  ehtsKeyValueMap.set('uri', uri);
-  ehtsKeyValueMap.set('http-method', httpMethod); // Use selected method
+  if(authorization)
+    ehtsKeyValueMap.set('Authorization', authorization);
+  if(contentType)
+    ehtsKeyValueMap.set('Content-Type', contentType);
+  if(uri)
+    ehtsKeyValueMap.set('uri', uri);
+  if(httpMethod)
+    ehtsKeyValueMap.set('http-method', httpMethod); // Use selected method
   if(body)
     ehtsKeyValueMap.set('body', body);
 
@@ -157,8 +161,7 @@ const generatePopToken = (authorization: string, contentType: string, uri: strin
 const sendRequest = async () => {
   await getAccessToken();
   const auth = 'Bearer ' + accessToken.value;
-  const popToken = generatePopToken(auth, 'application/json', currentURI.value, selectedMethod.value, requestBody.value);
-
+  const popToken = generatePopToken('', 'application/json', '/' + currentURI.value, selectedMethod.value, requestBody.value);
   try {
     const headers = {
       'Authorization': auth,
@@ -177,7 +180,7 @@ const sendRequest = async () => {
 };
 
 // Fetch data
-async function fetchData(popToken: string) {
+async function fetchAccessToken(popToken: string) {
   loading.value = true;
   error.value = "";
   data.value = "";
