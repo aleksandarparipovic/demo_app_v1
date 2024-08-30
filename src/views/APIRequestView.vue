@@ -3,7 +3,7 @@
     <div class="form-content">
       <div class="left-panel">
         <h1>Client Credentials</h1>
-        <form @submit.prevent="handleSubmit">
+        <form>
           <div class="input-group">
             <label for="clientID">Client ID</label>
             <input type="text" id="clientID" v-model="clientID" placeholder="Enter your Client ID" />
@@ -56,7 +56,6 @@ import { ref } from 'vue';
 import axios from 'axios';
 // @ts-ignore
 import popTokenBuilder from 'tmo-poptoken-builder/poptoken-builder-node.js';
-import { initializeAuthorizationHeader } from '../initAuthorizationHeader'; // Adjust path as necessary
 
 // Importing images
 import eyeIconOpen from '@/components/icons/eye-icon-open.png';
@@ -69,15 +68,19 @@ let clientSecret = ref('65N3MGG1kGq0uosO');
 // Visibility toggle for client secret
 let isSecretVisible = ref(false);
 
+/**
+ * Toggles the visibility of the Client Secret input field between text and password.
+ * @function toggleSecretVisibility
+ * @returns {void}
+ */
 const toggleSecretVisibility = () => {
   isSecretVisible.value = !isSecretVisible.value;
 };
 
 // Authorization header
 let authorizationHeader = ref('');
-const updateAuthorizationHeader = () => {
-  authorizationHeader.value = initializeAuthorizationHeader(clientID.value, clientSecret.value);
-};
+
+
 
 // API request state
 const uris = ref([
@@ -95,21 +98,41 @@ const data = ref('');
 let accessToken = ref('');
 let idToken = ref('');
 
-// Handle client credentials form submission
-function handleSubmit() {
-  console.log('Client ID:', clientID.value);
-  console.log('Client Secret:', clientSecret.value);
-  updateAuthorizationHeader();
-}
 
-// Handle URI change
+/**
+ * Computes and updates the authorization header using the ClientID and Client Secret.
+ * @function updateAuthorizationHeader
+ * @returns {void}
+ */
+const updateAuthorizationHeader = () => {
+    let res = clientID.value + ":" + clientSecret.value;
+    res = btoa(res);
+    res = "Basic " + res;
+    authorizationHeader.value = res;
+};
+
+/**
+ * Retrieves an access token by generating a PoP token and calling the authentication endpoint.
+ * @async
+ * @function getAccessToken
+ * @returns {Promise<void>} - Resolves when the access token is successfully retrieved and stored.
+ */
 const getAccessToken = async () => {
   updateAuthorizationHeader();
   const popToken = generatePopToken(authorizationHeader.value, 'application/json', '/oauth2/v2/tokens', 'POST', '');
   await fetchAccessToken(popToken);
 };
 
-// Generate PoP token
+/**
+ * Generates a Proof of Possession (PoP) token using the provided authorization header, content type, URI, HTTP method, and request body.
+ * @function generatePopToken
+ * @param {string} authorization - The authorization header value.
+ * @param {string} contentType - The content type of the request.
+ * @param {string} uri - The URI for which the PoP token is being generated.
+ * @param {string} httpMethod - The HTTP method (e.g., GET, POST) used in the request.
+ * @param {string} body - The body of the request.
+ * @returns {string} - The generated PoP token.
+ */
 const generatePopToken = (authorization: string, contentType: string, uri: string, httpMethod: string, body: string) => {
   updateAuthorizationHeader();
   let ehtsKeyValueMap = new Map();
@@ -143,21 +166,27 @@ const generatePopToken = (authorization: string, contentType: string, uri: strin
     isvXtVzhQqtxKpL3ErLeOA==
     -----END PRIVATE KEY-----
   `;
-  if(authorization)
+  if (authorization)
     ehtsKeyValueMap.set('Authorization', authorization);
-  if(contentType)
+  if (contentType)
     ehtsKeyValueMap.set('Content-Type', contentType);
-  if(uri)
+  if (uri)
     ehtsKeyValueMap.set('uri', uri);
-  if(httpMethod)
+  if (httpMethod)
     ehtsKeyValueMap.set('http-method', httpMethod); // Use selected method
-  if(body)
+  if (body)
     ehtsKeyValueMap.set('body', body);
 
   return popTokenBuilder.buildPopToken(ehtsKeyValueMap, privateKeyPemStr);
 };
 
-// Send request
+/**
+ * Sends an API request to the specified endpoint using the selected HTTP method and request body.
+ * Generates the required authorization headers, including a PoP token, and displays the response or error in the UI.
+ * @async
+ * @function sendRequest
+ * @returns {Promise<void>} - Resolves when the request is completed and the response or error is displayed.
+ */
 const sendRequest = async () => {
   await getAccessToken();
   const auth = 'Bearer ' + accessToken.value;
@@ -179,7 +208,13 @@ const sendRequest = async () => {
   }
 };
 
-// Fetch data
+/**
+ * Fetches an access token from the /oauth2/v2/tokens endpoint using the provided PoP token.
+ * @async
+ * @function fetchAccessToken
+ * @param {string} popToken - The PoP token used for authenticating the request.
+ * @returns {Promise<void>} - Resolves when the access token is successfully retrieved and stored in the accessToken ref.
+ */
 async function fetchAccessToken(popToken: string) {
   loading.value = true;
   error.value = "";
